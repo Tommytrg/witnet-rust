@@ -1,19 +1,26 @@
 [package]
 name = "witnet"
 version = "0.1.0"
-authors = ["Adán Sánchez de Pedro Crespo <adan@witnet.io>", "Johann Ortiz Grisales <johann@witnet.io>"]
+authors = ["Witnet Foundation <info@witnet.foundation>"]
+publish = false
+description = "An in-progress open source implementation of the Witnet protocol written in Rust."
 
 [[bin]]
 name = "witnet"
 path = "src/bin/witnet.rs"
 
 [dependencies]
+clap = "2.31"
+
 witnet_config = { path = "./config" }
 witnet_core = { path = "./core" }
-witnet_util = { path = "./util" }
-witnet_wit = { path = "./wit" }
+witnet_crypto = { path = "./crypto" }
+witnet_data_structures = { path = "./data_structures" }
+witnet_p2p = { path = "./p2p" }
+witnet_storage = { path = "./storage" }
 
-serde = "~1.0.8"
-serde_json = "~1.0.7"
-slog = { version = "^2.0.12", features = ["max_level_trace", "release_max_level_trace"] }
-clap = "2.29.4"
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3

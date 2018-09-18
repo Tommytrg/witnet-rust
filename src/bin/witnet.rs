@@ -1,149 +1,62 @@
-//This file is part of Rust-Witnet.
-//
-//Rust-Witnet is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-//Rust-Witnet is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-//You should have received a copy of the GNU General Public License
-// along with Rust-Witnet. If not, see <http://www.gnu.org/licenses/>.
-//
-//This file is based on src/bin/grin.rs from
-// <https://github.com/mimblewimble/grin>,
-// originally developed by The Grin Developers and distributed under the
-// Apache License, Version 2.0. You may obtain a copy of the License at
-// <http://www.apache.org/licenses/LICENSE-2.0>.
-
-//! Main for building the binary of a Witnet peer-to-peer node
+static TCP_ADDRESS: &str = "0.0.0.0:8888";
 
 extern crate clap;
-#[macro_use]
-extern crate slog;
 
 extern crate witnet_config as config;
 extern crate witnet_core as core;
-extern crate witnet_util as util;
-extern crate witnet_wit as wit;
+extern crate witnet_crypto as crypto;
+extern crate witnet_data_structures as data_structures;
+extern crate witnet_p2p as p2p;
+extern crate witnet_storage as storage;
 
-mod client;
-
+use std::net::{TcpListener, TcpStream};
 use std::thread;
-use std::time::Duration;
+use std::io::{Read, Write, Error};
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, SubCommand };
 
-use config::GlobalConfig;
-use core::global;
-use util::{init_logger, LoggingConfig, LOGGER};
+fn main() {
+    let matches = App::new("rust witnet")
+        .version("0.1.0")
+        .author("Witnet Foundation <info@witnet.foundation>")
+        .subcommand(SubCommand::with_name("server")
+            .about("Running witnet protocol"))
+        .get_matches();
 
-fn start_from_config_file(mut global_config: GlobalConfig) {
-    info!(
-        LOGGER,
-        "Starting the Witnet server from configuration file at {}",
-        global_config.config_file_path.unwrap().to_str().unwrap()
-    );
-
-    global::set_mining_mode(
-        global_config
-            .members
-            .as_mut()
-            .unwrap()
-            .server
-            .clone()
-            .chain_type,
-    );
-
-    wit::Server::start(global_config.members.as_mut().unwrap().server.clone()).unwrap();
-    loop {
-        thread::sleep(Duration::from_secs(60));
+    match matches.subcommand() {
+        ("server", Some(_server_args)) => {
+            run_sever();
+            return;
+            }
+        _ => {
+            println!("No option specified");
+            return;
+        }
     }
 }
 
-fn main() {
-    // First, load a global config object, then modify that object with any
-    // switches found so that the switches override the global config file
-
-    // This will return a global config object, which will either contain defaults
-    // for all of the config structures or a configuration read from a config
-    // file
-
-    let mut global_config =
-        GlobalConfig::new(None).unwrap_or_else(|e| panic!("Error parsing config file: {}", e));
-
-    if global_config.using_config_file {
-        // Initialize the logger
-        init_logger(global_config.members.as_mut().unwrap().logging.clone());
-        info!(
-            LOGGER,
-            "Using configuration file at: {}",
-            global_config
-                .config_file_path
-                .clone()
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
-    } else {
-        init_logger(Some(LoggingConfig::default()));
+fn handle_client(mut stream: TcpStream) -> Result<(), Error> {
+    println!("Incoming connection from: {}", stream.peer_addr()?);
+    let mut buf = [0; 512];
+    loop {
+        let bytes_read = stream.read(&mut buf)?;
+        if bytes_read == 0 { return Ok(()) }
+        stream.write(&buf[..bytes_read])?;
     }
+}
 
-    let args = App::new("Witnet")
-        .version("0.1")
-        .author("The Witnet Community")
-        .about("Rust implementation of the Witnet Protocol.")
-        .subcommand(
-            SubCommand::with_name("server")
-                .about("Control the Witnet server")
-                .arg(
-                    Arg::with_name("port")
-                        .short("p")
-                        .long("port")
-                        .help("Port to start the P2P server on")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("seed")
-                        .short("s")
-                        .long("seed")
-                        .help("Override seed node(s) to connect to")
-                        .takes_value(true),
-                )
-                .subcommand(
-                    SubCommand::with_name("start").about("Start the Witnet server as a daemon"),
-                )
-                .subcommand(SubCommand::with_name("stop").about("Stop the Witnet server daemon"))
-                .subcommand(
-                    SubCommand::with_name("run").about("Run the Witnet server in this console"),
-                ),
-        )
-        .get_matches();
+fn run_sever () {
+    let listener = TcpListener::bind(&TCP_ADDRESS).expect("Could not bind");
+    println!("Listening on 0.0.0.0:8888");
 
-    match args.subcommand() {
-        // Server commands and options
-        ("server", Some(server_args)) => {
-            server_command(server_args, global_config);
-        }
-
-        // If nothing is specified, try to just use the config file instead
-        // this could possibly become the way to configure most things
-        // with most command line options being phased out
-        _ => {
-            if global_config.using_config_file {
-                start_from_config_file(global_config);
-            } else {
-                // Won't attempt to start with defaults, just reject instead
-                println!("Unknown command, and no configuration file was found.");
-                println!("Use 'witnet help' for a list of all commands.")
+    for stream in listener.incoming() {
+        match stream {
+            Err(e) => { eprintln!("failed: {}", e) }
+            Ok(stream) => {
+                thread::spawn(move || {
+                    handle_client(stream).unwrap_or_else(|error| eprintln!("{:?}", error));
+                });
             }
         }
-    }
-
-    fn server_command(_server_args: &ArgMatches, _global_config: GlobalConfig) {
-        info!(LOGGER, "Starting the Witnet server...")
     }
 }
