@@ -1,5 +1,9 @@
 static TCP_ADDRESS: &str = "0.0.0.0:8888";
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 extern crate clap;
 
 extern crate witnet_config as config;
@@ -16,6 +20,8 @@ use std::io::{Read, Write, Error};
 use clap::{App, SubCommand };
 
 fn main() {
+    env_logger::init();
+
     let matches = App::new("rust witnet")
         .version("0.1.0")
         .author("Witnet Foundation <info@witnet.foundation>")
@@ -29,14 +35,14 @@ fn main() {
             return;
             }
         _ => {
-            println!("No option specified");
+            warn!("No option specified");
             return;
         }
     }
 }
 
 fn handle_client(mut stream: TcpStream) -> Result<(), Error> {
-    println!("Incoming connection from: {}", stream.peer_addr()?);
+    info!("Incoming connection from: {}", stream.peer_addr()?);
     let mut buf = [0; 512];
     loop {
         let bytes_read = stream.read(&mut buf)?;
@@ -47,14 +53,14 @@ fn handle_client(mut stream: TcpStream) -> Result<(), Error> {
 
 fn run_sever () {
     let listener = TcpListener::bind(&TCP_ADDRESS).expect("Could not bind");
-    println!("Listening on 0.0.0.0:8888");
+    info!("Listening on 0.0.0.0:8888");
 
     for stream in listener.incoming() {
         match stream {
-            Err(e) => { eprintln!("failed: {}", e) }
+            Err(e) => { error!("failed: {}", e) }
             Ok(stream) => {
                 thread::spawn(move || {
-                    handle_client(stream).unwrap_or_else(|error| eprintln!("{:?}", error));
+                    handle_client(stream).unwrap_or_else(|error| error!("{:?}", error));
                 });
             }
         }
