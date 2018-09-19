@@ -13,6 +13,7 @@ path = "src/bin/witnet.rs"
 clap = "2.31"
 env_logger = "0.5.13"
 log = "0.4.5"
+just = "0.3.12"
 
 witnet_config = { path = "./config" }
 witnet_core = { path = "./core" }
