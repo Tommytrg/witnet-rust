@@ -5,6 +5,9 @@ authors = ["Witnet Foundation <info@witnet.foundation>"]
 publish = false
 description = "An in-progress open source implementation of the Witnet protocol written in Rust."
 
+[workspace]
+members = ["config", "core", "crypto", "data_structures", "p2p", "storage"]
+
 [[bin]]
 name = "witnet"
 path = "src/bin/witnet.rs"
