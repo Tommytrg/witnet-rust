@@ -1,4 +1,4 @@
 pub fn greetings() -> String {
-    println!("Hello form core!");
+    println!("Hello from core!");
     return String::from("Hello from core!");
 }

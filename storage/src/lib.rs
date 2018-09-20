@@ -1,4 +1,4 @@
 pub fn greetings() -> String {
-    println!("Hello form storage!");
+    println!("Hello from storage!");
     return String::from("Hello from storage!");
 }

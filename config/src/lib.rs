@@ -1,3 +1,3 @@
 pub fn greetings() {
-    println!("Hello form core!");
+    println!("Hello from core!");
 }
