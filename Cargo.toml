@@ -3,6 +3,10 @@ name = "witnet"
 version = "0.1.0"
 authors = ["Witnet Foundation <info@witnet.foundation>"]
 publish = false
+repository = "witnet/rust-witnet"
+readme = "README.md"
+license-file = "LICENSE"
+keywords = ["witnet", "bloackchain", "smart-contracts", "dag", "cryptocurrency", "crypto", "oracles", "protocol", "p2p", "rust"]
 description = "An in-progress open source implementation of the Witnet protocol written in Rust."
 
 [workspace]
@@ -11,6 +15,9 @@ members = ["config", "core", "crypto", "data_structures", "p2p", "storage"]
 [[bin]]
 name = "witnet"
 path = "src/bin/witnet.rs"
+
+[badges]
+travis-ci = { repository = "https://github.com/witnet/rust-witnet", branch = "master" }
 
 [dependencies]
 clap = "2.31"
