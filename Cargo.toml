@@ -12,10 +12,6 @@ description = "An in-progress open source implementation of the Witnet protocol 
 [workspace]
 members = ["config", "core", "crypto", "data_structures", "p2p", "storage"]
 
-[[bin]]
-name = "witnet"
-path = "src/bin/witnet.rs"
-
 [badges]
 travis-ci = { repository = "https://github.com/witnet/rust-witnet", branch = "master" }
 
