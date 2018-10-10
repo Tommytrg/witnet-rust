@@ -22,12 +22,12 @@ const RAD_REQUEST_SUCCESS: &str = r#"{
         ]
     }],
     "aggregate": {
-    "script": [
-        { "f": "filter", "params": { "fn": "gt", "value": -30  } },
-        { "f": "filter", "params": { "fn": "lt", "value": 50  } },
-        { "f": "filter", "params": { "fn": "deviates",  "type": "abs", "amount": 1.5 } },
-        { "f": "reduce", "params": { "fn": "avg", "type": "arithmetic" } }
-    ]
+        "script": [
+            { "f": "filter", "params": { "f": "gt", "value": -30  } },
+            { "f": "filter", "params": { "f": "lt", "value": 50  } },
+            { "f": "filter", "params": { "f": "deviates",  "type": "abs", "amount": 1.5 } },
+            { "f": "reduce", "params": { "f": "avg", "type": "arithmetic" } }
+        ]
     },
     "deliver": [{
         "type": "http-post",
@@ -58,10 +58,10 @@ const RAD_REQUEST_INVALID_RETRIEVE_TYPE: &str = r#"{
     }],
     "aggregate": {
     "script": [
-        { "f": "filter", "params": { "fn": "gt", "value": -30  } },
-        { "f": "filter", "params": { "fn": "lt", "value": 50  } },
-        { "f": "filter", "params": { "fn": "deviates",  "type": "abs", "amount": 1.5 } },
-        { "f": "reduce", "params": { "fn": "avg", "type": "arithmetic" } }
+        { "f": "filter", "params": { "f": "gt", "value": -30  } },
+        { "f": "filter", "params": { "f": "lt", "value": 50  } },
+        { "f": "filter", "params": { "f": "deviates",  "type": "abs", "amount": 1.5 } },
+        { "f": "reduce", "params": { "f": "avg", "type": "arithmetic" } }
     ]
     },
     "deliver": [{
@@ -72,5 +72,11 @@ const RAD_REQUEST_INVALID_RETRIEVE_TYPE: &str = r#"{
 
 #[test]
 fn invalid_retrieve_type() {
-    assert_eq!(rad(RAD_REQUEST_INVALID_RETRIEVE_TYPE.to_string()), Err("Not allowed retrieve type".to_string()));
+    // TODO: scape characters usin an enum
+    assert_eq!(rad(RAD_REQUEST_INVALID_RETRIEVE_TYPE.to_string()), Err("Not allowed retrieve type: \"http-ge\"".to_string()));
+}
+
+#[test]
+fn retrieve_content() {
+    assert_eq!(rad(RAD_REQUEST_SUCCESS.to_string()), Ok(21));
 }

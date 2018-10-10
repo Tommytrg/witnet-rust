@@ -2,6 +2,82 @@ use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::slice::Iter;
+
+extern crate serde_json;
+
+use serde_json::{Value, Error};
+
+pub enum RadOperations {
+    ParseJson,
+}
+
+pub struct ParseJson {}
+
+impl ParseJson {
+    pub fn operation(&self, string: &str) -> Result<Value, &str> {
+        match serde_json::from_str(string) {
+            Ok(json) => Ok(json),
+            Err(e) => Err("Error parsing json")
+        }
+    }
+
+    pub fn cost(&self) -> u64 {
+        3
+    }
+}
+
+pub struct GetFromJson {
+    pub key: String // Should be String or Int64 but Value type only have Strings
+}
+
+impl GetFromJson {
+
+    // pub fn operation(&self, json: Value) -> Option<Value> {
+    //     Some(json[&self.key])
+    // }
+
+    pub fn cost(&self) -> u64 {
+        3
+    }
+}
+
+pub struct Filter {
+    f: FilterType,
+    kind: Option<String>,
+    value: Option<f64>,
+    amount: Option<f64>,
+}
+
+enum FilterType {
+    gt,
+    lt,
+    loet,
+    goet,
+    equal,
+    deviates
+}
+
+#[derive(PartialEq, Eq)]
+enum NumOrStr {
+    int64,
+    Sring
+}
+
+impl Filter {
+    pub fn operation<NumOrStr>(&self, array: Iter<NumOrStr>) -> Iter<NumOrStr> {
+        match self.f {
+            FilterType::gt => array.filter(|item| *item > self.value),
+            // "lt" => array.filter(|item| item < self.value),
+            // "loet" => array.filter(|item| item < self.value),
+            // "goet" => array.filter(|item| item < self.value),
+            // "equal" => array.filter(|item| item < self.value),
+            // "deviates" => array.filter(|item| item < self.value),
+        };
+
+        array
+    }
+}
 
 // Object
 // toJSON() -> String
