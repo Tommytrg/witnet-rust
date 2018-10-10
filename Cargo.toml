@@ -11,7 +11,7 @@ description = "An in-progress open source implementation of the Witnet protocol 
 edition = "2018"
 
 [workspace]
-members = ["config", "core", "crypto", "data_structures", "p2p", "storage"]
+members = ["config", "core", "crypto", "data_structures", "p2p", "storage", "rad_engine"]
 
 [badges]
 travis-ci = { repository = "https://github.com/witnet/witnet-rust", branch = "master" }
@@ -33,6 +33,8 @@ witnet_data_structures = { path = "./data_structures" }
 witnet_p2p = { path = "./p2p" }
 witnet_storage = { path = "./storage", features = ["rocksdb-backend"] }
 witnet_util = { path = "./util" }
+witnet_rad_engine = { path = "./rad_engine" }
+
 
 [profile.dev]
 opt-level = 0
