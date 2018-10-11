@@ -1,12 +1,12 @@
-use std::num::ParseFloatError;
-use std::num::ParseIntError;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::num::ParseFloatError;
+use std::num::ParseIntError;
 use std::slice::Iter;
 
 extern crate serde_json;
 
-use serde_json::{Value, Error};
+use serde_json::{Error, Value};
 
 pub enum RadOperations {
     ParseJson,
@@ -14,68 +14,52 @@ pub enum RadOperations {
 
 pub struct ParseJson {}
 
-impl ParseJson {
-    pub fn operation(&self, string: &str) -> Result<Value, &str> {
-        match serde_json::from_str(string) {
-            Ok(json) => Ok(json),
-            Err(e) => Err("Error parsing json")
-        }
-    }
-
-    pub fn cost(&self) -> u64 {
-        3
+pub fn parse_json(string: &str) -> Result<Value, &str> {
+    match serde_json::from_str(string) {
+        Ok(json) => Ok(json),
+        Err(e) => Err("Error parsing json"),
     }
 }
 
-pub struct GetFromJson {
-    pub key: String // Should be String or Int64 but Value type only have Strings
+pub fn get_from_json(json: Value, key: &str) -> Option<Value> {
+    // TODO: refactor to one step
+    let item: &Value = &json[key];
+    Some(item.clone())
 }
 
-impl GetFromJson {
-
-    // pub fn operation(&self, json: Value) -> Option<Value> {
-    //     Some(json[&self.key])
-    // }
-
-    pub fn cost(&self) -> u64 {
-        3
-    }
-}
-
-pub struct Filter {
-    f: FilterType,
-    kind: Option<String>,
-    value: Option<f64>,
-    amount: Option<f64>,
-}
-
-enum FilterType {
-    gt,
-    lt,
-    loet,
-    goet,
-    equal,
-    deviates
-}
-
-#[derive(PartialEq, Eq)]
-enum NumOrStr {
-    int64,
-    Sring
-}
-
-impl Filter {
-    pub fn operation<NumOrStr>(&self, array: Iter<NumOrStr>) -> Iter<NumOrStr> {
-        match self.f {
-            FilterType::gt => array.filter(|item| *item > self.value),
-            // "lt" => array.filter(|item| item < self.value),
-            // "loet" => array.filter(|item| item < self.value),
-            // "goet" => array.filter(|item| item < self.value),
-            // "equal" => array.filter(|item| item < self.value),
-            // "deviates" => array.filter(|item| item < self.value),
-        };
-
-        array
+pub fn filter<T>(array: Vec<T>, value: T, kind: &str, amount: i64) -> Vec<T>
+where
+    T: std::clone::Clone + PartialOrd,
+{
+    match kind {
+        "gt" => array
+            .iter()
+            .filter(|item| item > &&value)
+            .cloned()
+            .collect(),
+        "lt" => array
+            .iter()
+            .filter(|item| item < &&value)
+            .cloned()
+            .collect(),
+        "loet" => array
+            .iter()
+            .filter(|item| item <= &&value)
+            .cloned()
+            .collect(),
+        "goet" => array
+            .iter()
+            .filter(|item| item >= &&value)
+            .cloned()
+            .collect(),
+        "equal" => array
+            .iter()
+            .filter(|item| item == &&value)
+            .cloned()
+            .collect(),
+        // TODO: Implement standard deviation
+        // "deviates" => array.iter().filter(|item| item < value),
+        _ => array,
     }
 }
 
@@ -148,18 +132,18 @@ pub fn int_abs(num: i64) -> i64 {
 // TODO
 
 // mult() -> Int (division is mult(recip(x)))
-pub fn int_mult (num_1: i64, num_2: i64) -> Result<i64, String> {
+pub fn int_mult(num_1: i64, num_2: i64) -> Result<i64, String> {
     match num_1.checked_mul(num_2) {
         Some(x) => Ok(x),
-        None => Err("multiplication overflow".to_string())
+        None => Err("multiplication overflow".to_string()),
     }
 }
 
 // neg() -> Int
-pub fn int_neg (num: i64) -> Result<i64, String> {
+pub fn int_neg(num: i64) -> Result<i64, String> {
     match num.checked_neg() {
         Some(x) => Ok(x),
-        None => Err("negative overflow".to_string())
+        None => Err("negative overflow".to_string()),
     }
 }
 
@@ -167,7 +151,7 @@ pub fn int_neg (num: i64) -> Result<i64, String> {
 pub fn int_pow(num: i64, pow: u32) -> Result<i64, String> {
     match num.checked_pow(pow) {
         Some(x) => Ok(x),
-        None => Err("pow overflow".to_string())
+        None => Err("pow overflow".to_string()),
     }
 }
 
@@ -181,7 +165,7 @@ pub fn int_pow(num: i64, pow: u32) -> Result<i64, String> {
 pub fn int_sum(num_1: i64, num_2: i64) -> Result<i64, String> {
     match num_1.checked_add(num_2) {
         Some(x) => Ok(x),
-        None => Err("sum overflow".to_string())
+        None => Err("sum overflow".to_string()),
     }
 }
 

@@ -1,7 +1,7 @@
 extern crate reqwest;
 extern crate serde_json;
 
-use serde_json::{Value, Error};
+use serde_json::{Error, Value};
 
 use std::io::{stdout, Write};
 
@@ -44,8 +44,14 @@ pub fn rad(extended_rad: String) -> Result<u32, String> {
 
     // Retrieve
     if json_rad_request["retrieve"][0]["type"].to_string() == "\"http-get\"".to_string() {
-        let request_url: String = str::replace(&json_rad_request["retrieve"][0]["url"].to_string(), "\"", "");
-        let request_script = &json_rad_request["retrieve"][0]["script"].as_array().unwrap();
+        let request_url: String = str::replace(
+            &json_rad_request["retrieve"][0]["url"].to_string(),
+            "\"",
+            "",
+        );
+        let request_script = &json_rad_request["retrieve"][0]["script"]
+            .as_array()
+            .unwrap();
         println!("{}", request_url);
         let mut response = reqwest::get(&request_url).unwrap();
         let response_headers = &response;
@@ -57,14 +63,11 @@ pub fn rad(extended_rad: String) -> Result<u32, String> {
         let mut cost = 0;
         // let mut functions: Vec<?>;
 
-        for x in request_script.iter() {
-
-        }
+        for x in request_script.iter() {}
 
         Ok(3)
     } else {
-        Err("Not allowed retrieve type: ".to_string() + &json_rad_request["retrieve"][0]["type"].to_string())
+        Err("Not allowed retrieve type: ".to_string()
+            + &json_rad_request["retrieve"][0]["type"].to_string())
     }
-
-
 }
