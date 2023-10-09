@@ -47,6 +47,7 @@ mod witnessing;
 static ONE_WIT: u64 = 1_000_000_000;
 const MAX_VT_WEIGHT: u32 = 20_000;
 const MAX_DR_WEIGHT: u32 = 80_000;
+
 const REQUIRED_REWARD_COLLATERAL_RATIO: u64 =
     PSEUDO_CONSENSUS_CONSTANTS_WIP0022_REWARD_COLLATERAL_RATIO;
 const INITIAL_BLOCK_REWARD: u64 = 250 * 1_000_000_000;
@@ -433,7 +434,7 @@ fn vtt_no_inputs_zero_output() {
     let block_number = 0;
     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
 
-    // Try to create a data request with no inputs
+    // Try to create a value transfer with no inputs
     let pkh = PublicKeyHash::default();
     let vto0 = ValueTransferOutput {
         pkh,
@@ -8448,6 +8449,910 @@ fn tally_error_encode_reveal_wip() {
     x.unwrap();
 }
 
+//////////////////// st tests
+
+// #[test]
+// fn st_no_inputs_no_outputs() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let st_body = StakeTransactionBody::new(vec![], StakeOutput::default(),  ValueTransferOutput::default());
+//     let st_tx = StakeTransaction::new(st_body, vec![]);
+//     let x = validate_stake_transaction(
+//         &st_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::NoInputs {
+//             tx_hash: st_tx.hash(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_no_inputs_zero_output() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+
+//     // Try to create a data request with no inputs
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 0,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![], vec![vto0]);
+//     let vt_tx = VTTransaction::new(vt_body, vec![]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::NoInputs {
+//             tx_hash: vt_tx.hash(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_no_inputs() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+
+//     // Try to create a stake with no inputs
+//     // TODO: avoid default
+//     let keyed_signature = KeyedSignature { ..Default::default() };
+//     let stake_output = StakeOutput::new(2000, keyed_signature);
+
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let st_body = StakeTransactionBody::new(vec![], stake_output, vto0);
+//     let st_tx = StakeTransaction::new(st_body, vec![]);
+//     let x = validate_stake_transaction(
+//         &st_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::NoInputs {
+//             tx_hash: st_tx.hash(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_no_inputs_but_one_signature() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+
+//     // No inputs but 1 signature
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::MismatchingSignaturesNumber {
+//             signatures_n: 1,
+//             inputs_n: 0,
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_one_input_but_no_signature() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(
+//         "2222222222222222222222222222222222222222222222222222222222222222:0"
+//             .parse()
+//             .unwrap(),
+//     );
+
+//     // No signatures but 1 input
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+//     let vt_tx = VTTransaction::new(vt_body, vec![]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::MismatchingSignaturesNumber {
+//             signatures_n: 0,
+//             inputs_n: 1,
+//         }
+//     );
+// }
+
+// fn test_signature_empty_wrong_bad<F, H>(hashable: H, mut f: F)
+// where
+//     F: FnMut(H, KeyedSignature) -> Result<(), failure::Error>,
+//     H: Hashable + Clone,
+// {
+//     let ks = sign_tx(PRIV_KEY_1, &hashable);
+//     let hash = hashable.hash();
+
+//     // Replace the signature with default (all zeros)
+//     let ks_default = KeyedSignature::default();
+//     let signature_pkh = ks_default.public_key.pkh();
+//     let x = f(hashable.clone(), ks_default);
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash,
+//             msg: TransactionError::PublicKeyHashMismatch {
+//                 expected_pkh: MY_PKH_1.parse().unwrap(),
+//                 signature_pkh,
+//             }
+//             .to_string()
+//         },
+//     );
+
+//     // Replace the signature with an empty vector
+//     let mut ks_empty = ks.clone();
+//     match ks_empty.signature {
+//         Signature::Secp256k1(ref mut x) => x.der = vec![],
+//     }
+//     let x = f(hashable.clone(), ks_empty);
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash,
+//             msg: Secp256k1ConversionError::FailSignatureConversion.to_string(),
+//         },
+//     );
+
+//     // Flip one bit in the signature
+//     let mut ks_wrong = ks.clone();
+//     match ks_wrong.signature {
+//         Signature::Secp256k1(ref mut x) => x.der[10] ^= 0x1,
+//     }
+//     let x = f(hashable.clone(), ks_wrong);
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash,
+//             msg: "secp: signature failed verification".to_string(),
+//         },
+//     );
+
+//     // Flip one bit in the public key of the signature
+//     let mut ks_bad_pk = ks;
+//     ks_bad_pk.public_key.bytes[13] ^= 0x01;
+//     let signature_pkh = ks_bad_pk.public_key.pkh();
+//     let x = f(hashable.clone(), ks_bad_pk);
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash,
+//             // A "secp: signature failed verification" msg would also be correct here
+//             msg: TransactionError::PublicKeyHashMismatch {
+//                 expected_pkh: MY_PKH_1.parse().unwrap(),
+//                 signature_pkh,
+//             }
+//             .to_string(),
+//         }
+//     );
+
+//     // Sign transaction with a different public key
+//     let ks_different_pk = sign_tx(PRIV_KEY_2, &hashable);
+//     let signature_pkh = ks_different_pk.public_key.pkh();
+//     let x = f(hashable, ks_different_pk);
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash,
+//             msg: TransactionError::PublicKeyHashMismatch {
+//                 expected_pkh: MY_PKH_1.parse().unwrap(),
+//                 signature_pkh,
+//             }
+//             .to_string(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_one_input_signatures() {
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1000,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+
+//     test_signature_empty_wrong_bad(vt_body, |vt_body, vts| {
+//         let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//         let mut signatures_to_verify = vec![];
+
+//         validate_vt_transaction(
+//             &vt_tx,
+//             &utxo_diff,
+//             Epoch::default(),
+//             EpochConstants::default(),
+//             &mut signatures_to_verify,
+//             MAX_VT_WEIGHT,
+//         )?;
+//         verify_signatures_test(signatures_to_verify)?;
+
+//         Ok(())
+//     });
+// }
+
+// #[test]
+// fn st_input_not_in_utxo() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = UnspentOutputsPool::default();
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(
+//         "2222222222222222222222222222222222222222222222222222222222222222:0"
+//             .parse()
+//             .unwrap(),
+//     );
+
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::OutputNotFound {
+//             output: "2222222222222222222222222222222222222222222222222222222222222222:0"
+//                 .parse()
+//                 .unwrap(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_input_not_enough_value() {
+//     let mut signatures_to_verify = vec![];
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::NegativeFee
+//     );
+// }
+
+// #[test]
+// fn st_one_input_zero_value_output() {
+//     let mut signatures_to_verify = vec![];
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let zero_output = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 0,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![zero_output]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::ZeroValueOutput {
+//             tx_hash: vt_tx.hash(),
+//             output_id: 0,
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_one_input_two_outputs_negative_fee() {
+//     let mut signatures_to_verify = vec![];
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 2,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1,
+//         time_lock: 0,
+//     };
+//     let vto1 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 2,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0, vto1]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::NegativeFee,
+//     );
+// }
+
+// #[test]
+// fn st_one_input_two_outputs() {
+//     let mut signatures_to_verify = vec![];
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 21,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 13,
+//         time_lock: 0,
+//     };
+//     let vto1 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 7,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0, vto1]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     )
+//     .map(|(_, _, fee)| fee);
+//     assert_eq!(x.unwrap(), 21 - 13 - 7,);
+// }
+
+// #[test]
+// fn st_two_inputs_one_signature() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 21,
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 13,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 10,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::MismatchingSignaturesNumber {
+//             signatures_n: 1,
+//             inputs_n: 2,
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_two_inputs_one_signature_wrong_pkh() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 21,
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 13,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 10,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vts2 = sign_tx(PRIV_KEY_2, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts, vts2]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::VerifyTransactionSignatureFail {
+//             hash: vt_tx.hash(),
+//             msg: TransactionError::PublicKeyHashMismatch {
+//                 expected_pkh: MY_PKH_1.parse().unwrap(),
+//                 signature_pkh: MY_PKH_2.parse().unwrap(),
+//             }
+//             .to_string(),
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_two_inputs_three_signatures() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 21,
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 13,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 10,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts.clone(), vts.clone(), vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::MismatchingSignaturesNumber {
+//             signatures_n: 3,
+//             inputs_n: 2,
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_two_inputs_two_outputs() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 21,
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 13,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 10,
+//         time_lock: 0,
+//     };
+//     let vto1 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 20,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0, vto1]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts.clone(), vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     )
+//     .map(|(_, _, fee)| fee);
+//     assert_eq!(x.unwrap(), 21 + 13 - 10 - 20,);
+// }
+
+// #[test]
+// fn st_input_value_overflow() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: u64::max_value(),
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1_000,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     // The total output value should not overflow
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: u64::max_value() - 10,
+//         time_lock: 0,
+//     };
+//     let vto1 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 10,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0, vto1]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts; 2]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::InputValueOverflow
+//     );
+// }
+
+// #[test]
+// fn st_output_value_overflow() {
+//     let mut signatures_to_verify = vec![];
+//     let vto_21 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: u64::max_value() - 1_000,
+//         time_lock: 0,
+//     };
+//     let vto_13 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1_000,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto_21, vto_13], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti0 = Input::new(utxo_set.iter().next().unwrap().0);
+//     let vti1 = Input::new(utxo_set.iter().nth(1).unwrap().0);
+
+//     // The total output value should overflow
+//     let vto0 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: u64::max_value(),
+//         time_lock: 0,
+//     };
+//     let vto1 = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1_000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti0, vti1], vec![vto0, vto1]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts; 2]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     );
+
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::OutputValueOverflow
+//     );
+// }
+
+// #[test]
+// fn st_timelock() {
+//     // 1 epoch = 1000 seconds, for easy testing
+//     let epoch_constants = EpochConstants {
+//         checkpoint_zero_timestamp: 0,
+//         checkpoints_period: 1_000,
+//     };
+
+//     let test_vtt_epoch = |epoch, time_lock| {
+//         let vto = ValueTransferOutput {
+//             pkh: MY_PKH_1.parse().unwrap(),
+//             value: 1000,
+//             time_lock,
+//         };
+//         let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//         let block_number = 0;
+//         let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//         let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//         let pkh = PublicKeyHash::default();
+//         let vto0 = ValueTransferOutput {
+//             pkh,
+//             value: 1000,
+//             time_lock: 0,
+//         };
+
+//         let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+//         let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//         let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//         let mut signatures_to_verify = vec![];
+//         validate_vt_transaction(
+//             &vt_tx,
+//             &utxo_diff,
+//             epoch,
+//             epoch_constants,
+//             &mut signatures_to_verify,
+//             MAX_VT_WEIGHT,
+//         )?;
+//         verify_signatures_test(signatures_to_verify)
+//     };
+
+//     // (epoch, time_lock, should_be_accepted_into_block)
+//     let tests = vec![
+//         (0, 0, true),
+//         (0, 1, false),
+//         (0, 1_000_000, false),
+//         (999, 1_000_000, false),
+//         (999, 999_999, false),
+//         (1000, 999_999, true),
+//         (1000, 1_000_000, true),
+//         (1000, 1_000_001, false),
+//         (1001, 1_000_000, true),
+//         (1001, 1_000_001, true),
+//     ];
+
+//     for (epoch, time_lock, is_ok) in tests {
+//         let x = test_vtt_epoch(epoch, time_lock);
+//         assert_eq!(x.is_ok(), is_ok, "{:?}: {:?}", (epoch, time_lock, is_ok), x);
+//     }
+// }
+
+// #[test]
+// fn st_validation_weight_limit_exceeded() {
+//     let mut signatures_to_verify = vec![];
+//     let utxo_set = build_utxo_set_with_mint(vec![], None, vec![]);
+//     let utxo_diff = UtxoDiff::new(&utxo_set, 1000);
+
+//     let vt_body =
+//         VTTransactionBody::new(vec![Input::default()], vec![ValueTransferOutput::default()]);
+//     let vt_tx = VTTransaction::new(vt_body, vec![]);
+//     let vt_weight = vt_tx.weight();
+//     assert_eq!(vt_weight, 493);
+
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         493 - 1,
+//     );
+
+//     assert_eq!(
+//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
+//         TransactionError::ValueTransferWeightLimitExceeded {
+//             weight: 493,
+//             max_weight: 493 - 1
+//         }
+//     );
+// }
+
+// #[test]
+// fn st_valid() {
+//     let mut signatures_to_verify = vec![];
+//     let vto = ValueTransferOutput {
+//         pkh: MY_PKH_1.parse().unwrap(),
+//         value: 1000,
+//         time_lock: 0,
+//     };
+//     let utxo_set = build_utxo_set_with_mint(vec![vto], None, vec![]);
+//     let block_number = 0;
+//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+//     let vti = Input::new(utxo_set.iter().next().unwrap().0);
+
+//     let pkh = PublicKeyHash::default();
+//     let vto0 = ValueTransferOutput {
+//         pkh,
+//         value: 1000,
+//         time_lock: 0,
+//     };
+
+//     let vt_body = VTTransactionBody::new(vec![vti], vec![vto0]);
+//     let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//     let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//     let x = validate_vt_transaction(
+//         &vt_tx,
+//         &utxo_diff,
+//         Epoch::default(),
+//         EpochConstants::default(),
+//         &mut signatures_to_verify,
+//         MAX_VT_WEIGHT,
+//     )
+//     .map(|(_, _, fee)| fee);
+//     // The fee is 1000 - 1000 = 0
+//     assert_eq!(x.unwrap(), 0,);
+// }
+
+///////////////////
+
 static LAST_VRF_INPUT: &str = "4da71b67e7e50ae4ad06a71e505244f8b490da55fc58c50386c908f7146d2239";
 
 #[test]
@@ -10858,9 +11763,123 @@ fn validate_vt_weight_valid() {
             DEFAULT_INPUT_VALUE - 2 * 10,
         )
     };
-    let x = test_blocks_with_limits(vec![t0], 2 * 493, 0, GENESIS_BLOCK_HASH.parse().unwrap());
+    let x = test_blocks_with_limits(
+        vec![t0],
+        2 * 493,
+        0,
+        GENESIS_BLOCK_HASH.parse().unwrap(),
+    );
     x.unwrap();
 }
+
+// #[test]
+// fn validate_st_weight_overflow() {
+//     let t0 = {
+//         let vto0 = ValueTransferOutput {
+//             time_lock: 0,
+//             pkh: Default::default(),
+//             value: 10,
+//         };
+//         let output1_pointer = ONE_WIT_OUTPUT.parse().unwrap();
+//         let vt_body = VTTransactionBody::new(vec![Input::new(output1_pointer)], vec![vto0.clone()]);
+//         let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//         let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//         assert_eq!(vt_tx.weight(), 493);
+
+//         let output2_pointer = ONE_WIT_OUTPUT2.parse().unwrap();
+//         let vt_body2 = VTTransactionBody::new(vec![Input::new(output2_pointer)], vec![vto0]);
+//         let vts2 = sign_tx(PRIV_KEY_1, &vt_body2);
+//         let vt_tx2 = VTTransaction::new(vt_body2, vec![vts2]);
+//         assert_eq!(vt_tx2.weight(), 493);
+
+//         (
+//             BlockTransactions {
+//                 value_transfer_txns: vec![vt_tx, vt_tx2],
+//                 ..BlockTransactions::default()
+//             },
+//             DEFAULT_INPUT_VALUE - 2 * 10,
+//         )
+//     };
+//     let x = test_blocks_with_limits(
+//         vec![t0],
+//         2 * 493 - 1,
+//         0,
+//         0,
+//         0,
+//         GENESIS_BLOCK_HASH.parse().unwrap(),
+//     );
+//     assert_eq!(
+//         x.unwrap_err().downcast::<BlockError>().unwrap(),
+//         BlockError::TotalValueTransferWeightLimitExceeded {
+//             weight: 2 * 493,
+//             max_weight: 2 * 493 - 1,
+//         },
+//     );
+// }
+
+// #[test]
+// fn validate_st_weight_valid() {
+//     let t0 = {
+//         let vto0 = ValueTransferOutput {
+//             time_lock: 0,
+//             pkh: Default::default(),
+//             value: 10,
+//         };
+//         let output1_pointer = ONE_WIT_OUTPUT.parse().unwrap();
+//         let vt_body = VTTransactionBody::new(vec![Input::new(output1_pointer)], vec![vto0.clone()]);
+//         let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//         let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//         assert_eq!(vt_tx.weight(), 493);
+
+//         let output2_pointer = ONE_WIT_OUTPUT2.parse().unwrap();
+//         let vt_body2 = VTTransactionBody::new(vec![Input::new(output2_pointer)], vec![vto0]);
+//         let vts2 = sign_tx(PRIV_KEY_1, &vt_body2);
+//         let vt_tx2 = VTTransaction::new(vt_body2, vec![vts2]);
+//         assert_eq!(vt_tx2.weight(), 493);
+
+//         (
+//             BlockTransactions {
+//                 value_transfer_txns: vec![vt_tx, vt_tx2],
+//                 ..BlockTransactions::default()
+//             },
+//             DEFAULT_INPUT_VALUE - 2 * 10,
+//         )
+//     };
+//     let x = test_blocks_with_limits(vec![t0], 2 * 493, 0, GENESIS_BLOCK_HASH.parse().unwrap());
+//     x.unwrap();
+// }
+
+// #[test]
+// fn validate_st_number_amount_valid() {
+//     let t0 = {
+//         let vto0 = ValueTransferOutput {
+//             time_lock: 0,
+//             pkh: Default::default(),
+//             value: 10,
+//         };
+//         let output1_pointer = ONE_WIT_OUTPUT.parse().unwrap();
+//         let vt_body = VTTransactionBody::new(vec![Input::new(output1_pointer)], vec![vto0.clone()]);
+//         let vts = sign_tx(PRIV_KEY_1, &vt_body);
+//         let vt_tx = VTTransaction::new(vt_body, vec![vts]);
+//         assert_eq!(vt_tx.weight(), 493);
+
+//         let output2_pointer = ONE_WIT_OUTPUT2.parse().unwrap();
+//         let vt_body2 = VTTransactionBody::new(vec![Input::new(output2_pointer)], vec![vto0]);
+//         let vts2 = sign_tx(PRIV_KEY_1, &vt_body2);
+//         let vt_tx2 = VTTransaction::new(vt_body2, vec![vts2]);
+//         assert_eq!(vt_tx2.weight(), 493);
+
+//         (
+//             BlockTransactions {
+//                 value_transfer_txns: vec![vt_tx, vt_tx2],
+//                 ..BlockTransactions::default()
+//             },
+//             DEFAULT_INPUT_VALUE - 2 * 10,
+//         )
+//     };
+//     let x = test_blocks_with_limits(vec![t0], 2 * 493, 0, 0,0, GENESIS_BLOCK_HASH.parse().unwrap());
+//     x.unwrap();
+// }
 
 #[test]
 fn validate_vt_weight_genesis_valid() {
@@ -10997,7 +12016,12 @@ fn validate_dr_weight_valid() {
             DEFAULT_INPUT_VALUE - 2 * dr_value,
         )
     };
-    let x = test_blocks_with_limits(vec![t0], 0, 2 * 1605, GENESIS_BLOCK_HASH.parse().unwrap());
+    let x = test_blocks_with_limits(
+        vec![t0],
+        0,
+        2 * 1605,
+        GENESIS_BLOCK_HASH.parse().unwrap(),
+    );
     x.unwrap();
 }
 
