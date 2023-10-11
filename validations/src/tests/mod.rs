@@ -47,6 +47,8 @@ mod witnessing;
 static ONE_WIT: u64 = 1_000_000_000;
 const MAX_VT_WEIGHT: u32 = 20_000;
 const MAX_DR_WEIGHT: u32 = 80_000;
+const MAX_STAKE_BLOCK_WEIGHT: u32 = 10_000_000;
+const MIN_STAKE_NANOWITS: u64 = 10_000_000_000_000;
 
 const REQUIRED_REWARD_COLLATERAL_RATIO: u64 =
     PSEUDO_CONSENSUS_CONSTANTS_WIP0022_REWARD_COLLATERAL_RATIO;
@@ -8450,6 +8452,80 @@ fn tally_error_encode_reveal_wip() {
 }
 
 //////////////////// st tests
+#[test]
+fn st_no_inputs() {
+    let utxo_set = UnspentOutputsPool::default();
+    let block_number = 0;
+    let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+
+    // Try to create an stake tx with no inputs
+    let st_output = StakeOutput {
+        value: MIN_STAKE_NANOWITS + 1,
+        authorization: KeyedSignature::default(),
+    };
+    // let vto0 = ValueTransferOutput {
+    //     pkh,
+    //     value: 1000,
+    //     time_lock: 0,
+    // };
+    let st_body = StakeTransactionBody::new(
+        Vec::new(),
+        st_output,
+        None,
+    );
+    let st_tx = StakeTransaction::new(st_body, vec![]);
+    // let vt_body = VTTransactionBody::new(vec![], vec![vto0]);
+    // let vt_tx = VTTransaction::new(vt_body, vec![]);
+    let x = validate_stake_transaction(
+        &st_tx,
+        &utxo_diff,
+        Epoch::default(),
+        EpochConstants::default(),
+        &mut vec![],
+    );
+    assert_eq!(
+        x.unwrap_err().downcast::<TransactionError>().unwrap(),
+        TransactionError::NoInputs {
+            tx_hash: st_tx.hash(),
+        }
+    );
+}
+
+#[test]
+fn st_one_input_but_no_signature() {
+    let mut signatures_to_verify = vec![];
+    let utxo_set = UnspentOutputsPool::default();
+    let block_number = 0;
+    let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
+    let vti = Input::new(
+        "2222222222222222222222222222222222222222222222222222222222222222:0"
+            .parse()
+            .unwrap(),
+    );
+
+    // No signatures but 1 input
+    let stake_output = StakeOutput {
+        authorization: KeyedSignature::default(),
+        value: MIN_STAKE_NANOWITS + 1,
+    };
+
+    let stake_tx_body = StakeTransactionBody::new(vec![vti], stake_output, None);
+    let stake_tx = StakeTransaction::new(stake_tx_body, vec![]);
+    let x = validate_stake_transaction(
+        &stake_tx,
+        &utxo_diff,
+        Epoch::default(),
+        EpochConstants::default(),
+        &mut signatures_to_verify,
+    );
+    assert_eq!(
+        x.unwrap_err().downcast::<TransactionError>().unwrap(),
+        TransactionError::MismatchingSignaturesNumber {
+            signatures_n: 0,
+            inputs_n: 1,
+        }
+    );
+}
 
 // #[test]
 // fn st_no_inputs_no_outputs() {
@@ -8504,43 +8580,6 @@ fn tally_error_encode_reveal_wip() {
 //         x.unwrap_err().downcast::<TransactionError>().unwrap(),
 //         TransactionError::NoInputs {
 //             tx_hash: vt_tx.hash(),
-//         }
-//     );
-// }
-
-// #[test]
-// fn st_no_inputs() {
-//     let mut signatures_to_verify = vec![];
-//     let utxo_set = UnspentOutputsPool::default();
-//     let block_number = 0;
-//     let utxo_diff = UtxoDiff::new(&utxo_set, block_number);
-
-//     // Try to create a stake with no inputs
-//     // TODO: avoid default
-//     let keyed_signature = KeyedSignature { ..Default::default() };
-//     let stake_output = StakeOutput::new(2000, keyed_signature);
-
-//     let pkh = PublicKeyHash::default();
-//     let vto0 = ValueTransferOutput {
-//         pkh,
-//         value: 1000,
-//         time_lock: 0,
-//     };
-
-//     let st_body = StakeTransactionBody::new(vec![], stake_output, vto0);
-//     let st_tx = StakeTransaction::new(st_body, vec![]);
-//     let x = validate_stake_transaction(
-//         &st_tx,
-//         &utxo_diff,
-//         Epoch::default(),
-//         EpochConstants::default(),
-//         &mut signatures_to_verify,
-//         MAX_VT_WEIGHT,
-//     );
-//     assert_eq!(
-//         x.unwrap_err().downcast::<TransactionError>().unwrap(),
-//         TransactionError::NoInputs {
-//             tx_hash: st_tx.hash(),
 //         }
 //     );
 // }
