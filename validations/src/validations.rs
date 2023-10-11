@@ -1123,7 +1123,7 @@ pub fn validate_stake_transaction<'a>(
     signatures_to_verify: &mut Vec<SignaturesToVerify>,
 ) -> Result<(Vec<&'a Input>, &'a StakeOutput, u64, u32, &'a Option<ValueTransferOutput>), failure::Error> {
     // Check that the stake is greater than the min allowed
-    if st_tx.body.output.value < MIN_STAKE_NANOWITS.into() {
+    if st_tx.body.output.value < MIN_STAKE_NANOWITS {
         return Err(TransactionError::MinStakeNotReached {
             min_stake: MIN_STAKE_NANOWITS,
             stake: st_tx.body.output.value,
