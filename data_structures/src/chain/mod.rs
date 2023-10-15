@@ -46,7 +46,7 @@ use crate::{
     superblock::SuperBlockState,
     transaction::{
         CommitTransaction, DRTransaction, DRTransactionBody, Memoized, MintTransaction,
-        RevealTransaction, StakeTransaction, TallyTransaction, Transaction, TxInclusionProof,
+        RevealTransaction, StakeTransaction, TallyTransaction, Transaction, TxInclusionProof, UnstakeTransaction,
         VTTransaction,
     },
     transaction::{
@@ -419,6 +419,8 @@ pub struct BlockTransactions {
     pub tally_txns: Vec<TallyTransaction>,
     /// A list of signed stake transactions
     pub stake_txns: Vec<StakeTransaction>,
+    /// A list of signed unstake transactions
+    pub unstake_txns: Vec<UnstakeTransaction>,
 }
 
 impl Block {
@@ -448,6 +450,7 @@ impl Block {
             reveal_txns: vec![],
             tally_txns: vec![],
             stake_txns: vec![],
+            unstake_txns: vec![],
         };
 
         /// Function to calculate a merkle tree from a transaction vector
@@ -473,6 +476,7 @@ impl Block {
             reveal_hash_merkle_root: merkle_tree_root(&txns.reveal_txns),
             tally_hash_merkle_root: merkle_tree_root(&txns.tally_txns),
             stake_hash_merkle_root: merkle_tree_root(&txns.stake_txns),
+            unstake_hash_merkle_root: merkle_tree_root(&txns.unstake_txns),
         };
 
         Block::new(
@@ -689,6 +693,8 @@ pub struct BlockMerkleRoots {
     pub tally_hash_merkle_root: Hash,
     /// A 256-bit hash based on all of the stake transactions committed to this block
     pub stake_hash_merkle_root: Hash,
+    /// A 256-bit hash based on all of the unstake transactions committed to this block
+    pub unstake_hash_merkle_root: Hash,
 }
 
 /// Function to calculate a merkle tree from a transaction vector
@@ -718,6 +724,7 @@ impl BlockMerkleRoots {
             reveal_hash_merkle_root: merkle_tree_root(&txns.reveal_txns),
             tally_hash_merkle_root: merkle_tree_root(&txns.tally_txns),
             stake_hash_merkle_root: merkle_tree_root(&txns.stake_txns),
+            unstake_hash_merkle_root: merkle_tree_root(&txns.unstake_txns),
         }
     }
 }
@@ -2251,6 +2258,7 @@ impl TransactionsPool {
             Transaction::Tally(_tt) => Err(TransactionError::NotValidTransaction),
             Transaction::Mint(_mt) => Err(TransactionError::NotValidTransaction),
             Transaction::Stake(_mt) => !unimplemented!("contains Stake tx"),
+            Transaction::Unstake(_mt) => !unimplemented!("contains Unstake tx"),
         }
     }
 

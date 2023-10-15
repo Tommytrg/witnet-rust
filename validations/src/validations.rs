@@ -31,7 +31,7 @@ use witnet_data_structures::{
     radon_report::{RadonReport, ReportContext},
     transaction::{
         CommitTransaction, DRTransaction, MintTransaction, RevealTransaction, StakeOutput,
-        StakeTransaction, TallyTransaction, Transaction, VTTransaction,
+        StakeTransaction, TallyTransaction, Transaction, VTTransaction, UnstakeTransaction,
     },
     transaction_factory::{transaction_inputs_sum, transaction_outputs_sum},
     types::visitor::Visitor,
@@ -1123,7 +1123,7 @@ pub fn validate_stake_transaction<'a>(
     signatures_to_verify: &mut Vec<SignaturesToVerify>,
 ) -> Result<(Vec<&'a Input>, &'a StakeOutput, u64, u32, &'a Option<ValueTransferOutput>), failure::Error> {
     // Check that the stake is greater than the min allowed
-    if st_tx.body.output.value < MIN_STAKE_NANOWITS {
+    if st_tx.body.output.value < MIN_STAKE_NANOWITS{
         return Err(TransactionError::MinStakeNotReached {
             min_stake: MIN_STAKE_NANOWITS,
             stake: st_tx.body.output.value,
@@ -1158,6 +1158,58 @@ pub fn validate_stake_transaction<'a>(
     ))
 }
 
+/// Function to validate a unstake transaction
+pub fn validate_unstake_transaction<'a>(
+    _ut_tx: &'a UnstakeTransaction,
+    _st_tx: &'a StakeTransaction,
+    _utxo_diff: &UtxoDiff<'_>,
+    _epoch: Epoch,
+    _epoch_constants: EpochConstants,
+    _signatures_to_verify: &mut Vec<SignaturesToVerify>,
+) -> Result<(), failure::Error> {
+    // Check that the stake is greater than the min allowed
+    // if st_tx.body.output.value < MIN_STAKE_NANOWITS{
+    //     return Err(TransactionError::MinStakeNotReached {
+    //         min_stake: MIN_STAKE_NANOWITS,
+    //         stake: st_tx.body.output.value,
+    //     }
+    //     .into());
+    // }
+
+    // validate_transaction_signature(
+    //     &ut_tx.signatures,
+    //     &ut_tx.body.inputs,
+    //     ut_tx.hash(),
+    //     utxo_diff,
+    //     signatures_to_verify,
+    // )?;
+
+    // validate authorization
+    // validate_unstake_authorization(&ut)?;
+    
+    // validate_unstake_signatures(&ut, &st)?;
+
+
+    // let fee = ut_tx.body.value_transfer_output.value;
+
+    Ok(())
+}
+
+/// Function to validate a unstake authorization 
+pub fn validate_unstake_authorization<'a>(
+    _ut_tx: &'a UnstakeTransaction,
+) {
+   unimplemented!() 
+}
+
+/// Function to validate a unstake signature 
+pub fn validate_unstake_signatures<'a>(
+    _ut_tx: &'a UnstakeTransaction,
+    _st_tx: &'a StakeTransaction,
+) {
+   unimplemented!() 
+}
+
 /// Function to validate a block signature
 pub fn validate_block_signature(
     block: &Block,
@@ -1184,6 +1236,7 @@ pub fn validate_block_signature(
 
     Ok(())
 }
+
 
 /// Function to validate a pkh signature
 pub fn validate_pkh_signature(
@@ -1828,6 +1881,49 @@ pub fn validate_block_transactions(
 
     let st_hash_merkle_root = st_mt.root();
 
+    let ut_mt = ProgressiveMerkleTree::sha256();
+    // let mut ut_weight: u32 = 0;
+
+    // for transaction in &block.txns.unstake_txns {
+    //     // TODO: get tx, default to compile
+    //     let st_tx = StakeTransaction::default();
+    //     let (inputs, _output, fee, weight, change) = validate_unstake_transaction(
+    //         transaction,
+    //         &st_tx,
+    //         &utxo_diff,
+    //         epoch,
+    //         epoch_constants,
+    //         signatures_to_verify,
+    //     )?;
+
+    //     total_fee += fee;
+
+    //     // Update ut weight
+    //     let acc_weight = ut_weight.saturating_add(weight);
+    //     if acc_weight > MAX_UNSTAKE_BLOCK_WEIGHT {
+    //         return Err(BlockError::TotalStakeWeightLimitExceeded {
+    //             weight: acc_weight,
+    //             max_weight: MAX_STAKE_BLOCK_WEIGHT,
+    //         }
+    //         .into());
+    //     }
+    //     ut_weight = acc_weight;
+
+    //     // Add new hash to merkle tree
+    //     let txn_hash = transaction.hash();
+    //     let Hash::SHA256(sha) = txn_hash;
+    //     ut_mt.push(Sha256(sha));
+
+    //     // TODO: Move validations to a visitor
+    //     // // Execute visitor
+    //     // if let Some(visitor) = &mut visitor {
+    //     //     let transaction = Transaction::ValueTransfer(transaction.clone());
+    //     //     visitor.visit(&(transaction, fee, weight));
+    //     // }
+    // }
+
+    let ut_hash_merkle_root = ut_mt.root();
+
     // Validate Merkle Root
     let merkle_roots = BlockMerkleRoots {
         mint_hash: block.txns.mint.hash(),
@@ -1837,6 +1933,7 @@ pub fn validate_block_transactions(
         reveal_hash_merkle_root: Hash::from(re_hash_merkle_root),
         tally_hash_merkle_root: Hash::from(ta_hash_merkle_root),
         stake_hash_merkle_root: Hash::from(st_hash_merkle_root),
+        unstake_hash_merkle_root: Hash::from(ut_hash_merkle_root),
     };
 
     if merkle_roots != block.block_header.merkle_roots {
@@ -2284,6 +2381,7 @@ pub fn validate_merkle_tree(block: &Block) -> bool {
         reveal_hash_merkle_root: merkle_tree_root(&block.txns.reveal_txns),
         tally_hash_merkle_root: merkle_tree_root(&block.txns.tally_txns),
         stake_hash_merkle_root: merkle_tree_root(&block.txns.stake_txns),
+        unstake_hash_merkle_root: merkle_tree_root(&block.txns.unstake_txns),
     };
 
     merkle_roots == block.block_header.merkle_roots

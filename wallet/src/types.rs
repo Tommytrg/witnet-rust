@@ -323,6 +323,7 @@ pub enum TransactionHelper {
     Tally(TallyTransaction),
     Mint(MintTransaction),
     Stake(StakeTransaction),
+    UnstakeTransaction(UnstakeTr)
 }
 
 impl From<Transaction> for TransactionHelper {
@@ -339,6 +340,7 @@ impl From<Transaction> for TransactionHelper {
             Transaction::Tally(tallytransaction) => TransactionHelper::Tally(tallytransaction),
             Transaction::Mint(minttransaction) => TransactionHelper::Mint(minttransaction),
             Transaction::Stake(staketransaction) => TransactionHelper::Stake(staketransaction),
+            Transaction::UnStake(unstaketransaction) => TransactionHelper::Stake(unstaketransaction),
         }
     }
 }
@@ -357,6 +359,7 @@ impl From<TransactionHelper> for Transaction {
             TransactionHelper::Tally(tallytransaction) => Transaction::Tally(tallytransaction),
             TransactionHelper::Mint(minttransaction) => Transaction::Mint(minttransaction),
             TransactionHelper::Stake(staketransaction) => Transaction::Stake(staketransaction),
+            TransactionHelper::unstake(unstaketransaction) => Transaction::UnStake(unstaketransaction),
         }
     }
 }

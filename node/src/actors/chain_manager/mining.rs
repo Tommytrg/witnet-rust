@@ -1003,6 +1003,7 @@ pub fn build_block(
     let reveal_hash_merkle_root = merkle_tree_root(&reveal_txns);
     let tally_hash_merkle_root = merkle_tree_root(&tally_txns);
     let stake_hash_merkle_root = merkle_tree_root(&stake_txns);
+    let unstake_hash_merkle_root = merkle_tree_root(&unstake_txns);
     let merkle_roots = BlockMerkleRoots {
         mint_hash: mint.hash(),
         vt_hash_merkle_root,
@@ -1011,6 +1012,7 @@ pub fn build_block(
         reveal_hash_merkle_root,
         tally_hash_merkle_root,
         stake_hash_merkle_root,
+        unstake_hash_merkle_root,
     };
 
     let block_header = BlockHeader {
@@ -1029,6 +1031,7 @@ pub fn build_block(
         reveal_txns,
         tally_txns,
         stake_txns,
+        unstake_txns,
     };
 
     (block_header, txns)
