@@ -35,6 +35,19 @@ const THIRD_EMERGENCY_COMMITTEE: [&str; 7] = [
     "wit1wl200uau9zp072ps0wfpq74kd0a65uhd5c4dfk",
 ];
 
+/// Committee for superblock indices AAA_BBB-CCC_DDD
+/// (aprox. from Dec 28 2023 @ 10:30am UTC, to Jan ?? 2024 @ 2:30am UTC)
+const FORTH_EMERGENCY_COMMITTEE: [&str; 5] = [
+    "wit1nawuk8f2hckz6ct9wlzg95fhg3kyjzlrrd99qz",
+    "wit1drcpu0xc2akfcqn8r69vw70pj8fzjhjypdcfsq",
+    "wit1drcpu3x42y5vp7w3pe203xrwpnth2pnt6c0dm9",
+    "wit1llz4vw9mszjqud5pqavf84208entwz73lxekzm",
+     // testnet bridge
+    "wit1c0ucz2u9hwgqflkn4xjeyxtla9tqp0sderzkjr"
+    // mainnet bridge
+    // "wit1sp8xnclrhm4j5lrzxwnxerdetzsjqw88kwr05f",
+];
+
 /// 22 January 2021 @ 09:00:00 UTC
 pub const FIRST_HARD_FORK: Epoch = 192000;
 /// 28 April 2021 @ 9:00:00 UTC
@@ -439,6 +452,20 @@ pub fn in_emergency_period(
     {
         Some(
             THIRD_EMERGENCY_COMMITTEE
+                .iter()
+                .map(|address| {
+                    address
+                        .parse()
+                        .expect("Malformed address in emergency committee")
+                })
+                .collect(),
+        )
+    } else if Environment::Mainnet == environment
+        && superblock_index > 0 
+        && superblock_index < 0 
+    {
+        Some(
+            FORTH_EMERGENCY_COMMITTEE
                 .iter()
                 .map(|address| {
                     address
