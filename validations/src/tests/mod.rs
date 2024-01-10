@@ -3439,6 +3439,8 @@ fn commitment_invalid_proof() {
     let cs = sign_tx(PRIV_KEY_1, &cb);
     let c_tx = CommitTransaction::new(cb, vec![cs]);
     let mut signatures_to_verify = vec![];
+    
+    let superblock_period = 1;
 
     let superblock_period = 1;
 
