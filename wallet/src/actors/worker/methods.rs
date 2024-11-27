@@ -566,6 +566,14 @@ impl Worker {
                 Transaction::Tally(tally) => Some(IndexTransactionQuery::DataRequestReport(
                     tally.dr_pointer.to_string(),
                 )),
+                Transaction::Stake(st) => Some(IndexTransactionQuery::InputTransactions(
+                    st.body
+                        .inputs
+                        .iter()
+                        .map(|input| *input.output_pointer())
+                        .collect(),
+                )),
+                Transaction::Unstake(_ut) => None,
                 _ => None,
             })
             .collect();
@@ -662,6 +670,15 @@ impl Worker {
                     .ok_or_else(|| {
                         Error::OutputIndexNotFound(output.output_index, format!("{:?}", txn))
                     }),
+                Transaction::Stake(st) => st
+                    .body
+                    .change
+                    .clone()
+                    .ok_or_else(|| {
+                        Error::OutputIndexNotFound(output.output_index, format!("{:?}", txn))
+                    }),
+
+
                 _ => Err(Error::TransactionTypeNotSupported),
             })
             .collect();
