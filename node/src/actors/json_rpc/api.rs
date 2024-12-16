@@ -2190,6 +2190,8 @@ pub enum QueryStakesArgument {
     Withdrawer(String),
     /// To query by stake validator and withdrawer
     Key((String, String)),
+    /// To query all stake entries
+    All,
 }
 
 /// Query the amount of nanowits staked by an address.
@@ -2200,6 +2202,7 @@ pub async fn query_stakes(params: Result<Option<QueryStakesArgument>, Error>) ->
     // If a withdrawer address is not specified, default to local node address
     let key: QueryStakesParams = if let Some(address) = params {
         match address {
+            QueryStakesArgument::All => QueryStakesParams::All,
             QueryStakesArgument::Validator(validator) => QueryStakesParams::Validator(
                 PublicKeyHash::from_bech32(get_environment(), &validator)
                     .map_err(internal_error)?,
