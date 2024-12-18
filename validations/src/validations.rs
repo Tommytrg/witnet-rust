@@ -2174,7 +2174,8 @@ pub fn validate_block_transactions(
                     .saturating_add(dro.weight())
                     .saturating_add(dro.extra_weight());
 
-                if data_request_has_too_many_witnesses(&dro, stakes.validator_count(), Some(epoch)) {
+                if data_request_has_too_many_witnesses(&dro, stakes.validator_count(), Some(epoch))
+                {
                     too_many_witnesses_drs.insert(dr);
                 }
             }
