@@ -1,28 +1,63 @@
-environment = "testnet"
+<<<<<<< Updated upstream
+# You can read more about all the configuration params in
+# https://docs.witnet.io/configuration/toml-file/
+=======
+>>>>>>> Stashed changes
+environment = "development"
+
+# Setting the environment to testnet allows us to define some consensus constants 
+[consensus_constants]
+# Set the bootstrap time to Thu Nov 21 2024 20:00:00 UTC 
+<<<<<<< Updated upstream
+checkpoint_zero_timestamp = 1736346623
+checkpoint_period = 5
+
+=======
+checkpoint_zero_timestamp = 1736938408
+checkpoint_period = 5
+>>>>>>> Stashed changes
+# Genesis block hash
+genesis_hash = "324294b8e2f6a97bb7e608dbeab73ae63b4aaccf4e45ac9340520ca3862aefda"
+# Fix the bootstrap committee
+bootstrapping_committee = ["twit1ws0c7pud97jf4ykm0nfg9eam29u2prz4e3rwh8", "twit18a4qt7g37pe86m5fwtcr9q0u54azmsg3t75ayk"]
+# Make sure we can properly mine the first couple of block
+minimum_difficulty = 0
+epochs_with_minimum_difficulty = 1024
+
+[protocol]
+v1_7 = [0, 5]
+v1_8 = [0, 5]
+v2_0 = [25, 20]
 
 [connections]
+<<<<<<< Updated upstream
+server_addr = "0.0.0.0:21338"
+known_peers = ["127.0.0.1:21337", "127.0.0.1:21338"]
+inbound_limit = 128
+outbound_limit = 1
+bootstrap_peers_period_seconds = 1
+handshake_max_ts_diff = 0
+consensus_c = 70
+reject_sybil_inbounds = false
+bucketing_ice_period_seconds = 300
+
+[storage]
+=======
 # Server address tells what local interface and port the Witnet node server should bind to.
 # This will probably look like `0.0.0.0:21337` or `192.168.x.x:21337`, but it totally depends on your local network.
-server_addr = "0.0.0.0:21337"
+server_addr = "127.0.0.1:22338"
 # Public address needs to match your *public* IP and port, assuming your router is configured to forward incoming
 # connections to the local IP of the device the node is running. Failure to configure this setting will result in your
 # node not receiving inbound connections (see: https://docs.witnet.io/try/run-a-node/#open-your-ports).
-public_addr = "0.0.0.0:21337"
+public_addr = "88.19.29.178:21338"
 # List of bootstrap peer addresses. The first time that a node runs, it connects to some of these addresses and query
 # them for a list of all the addresses they know. From that moment on, the addresses listed here are not given any
 # preference over addresses that have been discovered in any way.
-known_peers = [
-    "62.146.171.153:31337",
-    "62.146.171.153:32337",
-    "62.146.171.154:31337",
-    "62.146.171.154:32337",
-    "62.146.171.155:31337",
-    "62.146.171.155:32337",
-]
+known_peers = ["127.0.0.1:21337", "127.0.0.1:22338"]
 
 # How many peer connections to stablish before considering that is safe to decide what the best chain tip is, based on
 # the beacons that those peers are announcing.
-outbound_limit = 2
+outbound_limit = 1
 # Period for opening new peer connections while the current number of peers is lower than `outbound_limit`.
 bootstrap_peers_period_seconds = 1
 # Reject (tarpit) inbound connections coming from addresses that are alike (i.e. by default having the first 18 bits equal),
@@ -31,25 +66,30 @@ reject_sybil_inbounds = false
 
 [storage]
 # Path of the folder where RocksDB storage files will be written to.
-db_path = ".witnet/storage"
+>>>>>>> Stashed changes
+db_path = ".witnet-rust-testnet-stake_02"
+master_key_import_path = "zutano.txt"
 
 [jsonrpc]
-# Enables or disables the JSON-RPC server altogether. This is needed for using the CLI methods of the node.
 enabled = true
+enable_sensitive_methods = true
 # The addresses (IP and port) which the JSON-RPC server binds to.
 # WARNING: these should be kept to a local, private address (e.g. 127.0.0.1) to prevent any device in your local network
 # (and potentially, the internet) from messing with your JSON-RPC server.
 # JSON-RPC over plain TCP (required for CLI usage). Set `enabled` above to `false` to disable.
-tcp_address = "127.0.0.1:21338"
+tcp_address = "127.0.0.1:1235"
 # JSON-RPC over HTTP. Remove the line to disable it.
-http_address = "127.0.0.1:21339"
+http_address = "127.0.0.1:1222"
 # JSON-RPC over WebSockets. Remove the line to disable it.
-ws_address = "127.0.0.1:21340"
+ws_address = "127.0.0.1:1223"
 
+<<<<<<< Updated upstream
+=======
 [ntp]
 # Period for checking the local system clock drift against a public NTP server.
 update_period_seconds = 1024
 
+>>>>>>> Stashed changes
 [mining]
 # Enable or disable mining and participation in resolving data requests.
 enabled = true
@@ -65,15 +105,29 @@ data_request_max_retrievals_per_epoch = 30
 data_request_timeout_milliseconds = 2000
 # Path for the `genesis_block.json` file that contains the initial wit allocations that need to be built into the first
 # block in the block chain.
-genesis_path = "./genesis_block.json"
+genesis_path = "./empty_gen.json"
 # `mint_external_address` and `mint_external_percentage` enable splitting the mint reward between the node's
 # own address and an "external" address, e.g. a the address of a wallet. `mint_external_percentage` indicates
 # the percentage of the block rewards that will be assigned to `mint_external_address` (50% by default)
+<<<<<<< Updated upstream
+#mint_external_address = "twit18a4qt7g37pe86m5fwtcr9q0u54azmsg3t75ayk"
+=======
 #mint_external_address = "twit1jqgf4rxjrgas3kdhj3t4cr3mg3n33m8zw0aglr"
+>>>>>>> Stashed changes
 #mint_external_percentage = 50
 # Set a minimum fee you require before your node includes a value transfer transaction into a block
 minimum_vtt_fee_nanowits = 1
 
+<<<<<<< Updated upstream
+[ntp]
+enabled = false
+
+[log]
+level = "debug"
+
+[tapi]
+oppose_wip0016 = true
+=======
 [witnessing]
 # Tells how strict or lenient to be with inconsistent data sources. Paranoid level is defined as percentage of
 # successful retrievals over total number of retrieval transports. That is, if we have 3 proxies in addition to the
@@ -92,8 +146,4 @@ proxies = []
 [log]
 # Logging level, i.e. from more verbose to quieter: "trace" > "debug" > "info" > "warn" > "error" > "none"
 level = "info"
-
-[wallet]
-# The address (IP and port) of a Witnet node's JSON-RPC server. This should normally match `json_rpc.server_address`.
-# If more than one address is provided, the wallet will choose one at random.
-node_url = "127.0.0.1:21338"
+>>>>>>> Stashed changes

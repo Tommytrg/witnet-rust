@@ -1,0 +1,16 @@
+{
+  "alloc": [
+    [
+      {
+        "address": "twit1uhclpr4rdaf88zxu2x2qczr5r7887whtkqpp79",
+        "value": "10000000000000000",
+        "timelock": "0"
+      },
+      {
+        "address": "twit1x0mrgd3eqq7vpvjucxt3jxz56vt58velg9jrnm",
+        "value": "10000000000000000",
+        "timelock": "0"
+      }
+    ]
+  ]
+}

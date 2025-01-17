@@ -11,7 +11,7 @@ use witnet_data_structures::{
         StateMachine, ValueTransferOutput,
     },
     fee::AbsoluteFee,
-    proto::versioning::VersionedHashable,
+    proto::versioning::{ProtocolVersion, VersionedHashable},
     transaction::Transaction,
 };
 use witnet_futures_utils::TryFutureExt2;
@@ -156,10 +156,14 @@ impl Worker {
                     .expect("It should always found a superconsolidated block");
                 let get_gen_future = self.get_block(gen_entry.1.clone());
                 let (block, _confirmed) = futures::executor::block_on(get_gen_future)?;
-
+                let protocol_version = self
+                .node
+                .protocol_info
+                .all_versions
+                .version_for_epoch(block.block_header.beacon.checkpoint);
                 CheckpointBeacon {
                     checkpoint: block.block_header.beacon.checkpoint,
-                    hash_prev_block: block.hash(),
+                    hash_prev_block: block.versioned_hash(protocol_version),
                 }
             }
             // Use provided epoch as birth date
@@ -181,10 +185,14 @@ impl Worker {
                 );
                 let get_gen_future = self.get_block(gen_entry.1.clone());
                 let (block, _confirmed_1) = futures::executor::block_on(get_gen_future)?;
-
+                let protocol_version = self
+                .node
+                .protocol_info
+                .all_versions
+                .version_for_epoch(block.block_header.beacon.checkpoint);
                 CheckpointBeacon {
                     checkpoint: block.block_header.beacon.checkpoint,
-                    hash_prev_block: block.hash(),
+                    hash_prev_block: block.versioned_hash(protocol_version),
                 }
             }
             None => {
@@ -566,6 +574,14 @@ impl Worker {
                 Transaction::Tally(tally) => Some(IndexTransactionQuery::DataRequestReport(
                     tally.dr_pointer.to_string(),
                 )),
+                Transaction::Stake(st) => Some(IndexTransactionQuery::InputTransactions(
+                    st.body
+                        .inputs
+                        .iter()
+                        .map(|input| *input.output_pointer())
+                        .collect(),
+                )),
+                Transaction::Unstake(_ut) => None,
                 _ => None,
             })
             .collect();
@@ -662,6 +678,15 @@ impl Worker {
                     .ok_or_else(|| {
                         Error::OutputIndexNotFound(output.output_index, format!("{:?}", txn))
                     }),
+                Transaction::Stake(st) => st
+                    .body
+                    .change
+                    .clone()
+                    .ok_or_else(|| {
+                        Error::OutputIndexNotFound(output.output_index, format!("{:?}", txn))
+                    }),
+
+
                 _ => Err(Error::TransactionTypeNotSupported),
             })
             .collect();
@@ -775,6 +800,10 @@ impl Worker {
         let mut latest_beacon = first_beacon;
         // Synchronization bootstrap process to query the last received `last_block`
         // Note: if first sync, the queried block will be the genesis (epoch #0)
+        println!("LAST SYNCED checkpoint ------>>>> {:?}", wallet_data.last_sync.checkpoint);
+        println!("LAST SYNCED block ------>>>> {:?}", wallet_data.last_sync.hash_prev_block);
+        println!("LAST CHECKPOINT ------>>>> {:?}", wallet_data.last_confirmed.checkpoint);
+        println!("PREV LAST HASH ------->>> {:?}", wallet_data.last_confirmed.hash_prev_block);
         if wallet_data.last_confirmed.checkpoint == 0
             && wallet_data.last_confirmed.hash_prev_block == wallet.get_bootstrap_hash()
         {
@@ -795,6 +824,8 @@ impl Worker {
             // Wrap block into an atomic reference count for the sake of avoiding expensive clones
             let block_arc = Arc::new(block);
 
+            println!("handle block in methods 797");
+
             // Process genesis block (transactions indexed as confirmed)
             self.handle_block(block_arc, true, wallet.clone(), DynamicSink::default())?;
         }
@@ -804,12 +835,13 @@ impl Worker {
         let tip_res: Vec<ChainEntry> = futures::executor::block_on(tip_fut)?;
         let tip = CheckpointBeacon::try_from(
             tip_res
-                .first()
-                .expect("A Witnet chain should always have at least one block"),
+            .first()
+            .expect("A Witnet chain should always have at least one block"),
         )
         .expect("A Witnet node should present block hashes as 64 hexadecimal characters");
-
-        // Store the tip into the worker in form of beacon
+        println!("LAST CHECKPOINT *------>>>> {:?}", tip.checkpoint);
+        println!("LAST CHECKPOINT HASH *------>>>> {:?}", tip.hash_prev_block);
+    // Store the tip into the worker in form of beacon
         self.node.update_last_beacon(tip);
 
         // Return error if the node's tip of the chain is behind ours
@@ -856,6 +888,7 @@ impl Worker {
                 let block_arc = Arc::new(block);
 
                 // Process each block and update latest beacon
+                println!("handle block in methods 859");
                 self.handle_block(
                     block_arc.clone(),
                     confirmed,
@@ -986,11 +1019,30 @@ impl Worker {
         let wallet_data = wallet.public_data()?;
         let last_sync = wallet_data.last_sync;
         let last_confirmed = wallet_data.last_confirmed;
+        let checkpoint= block.block_header.beacon.checkpoint;
+        // let mut checkpoint= block.block_header.beacon.checkpoint;
+        // if checkpoint == 202 {
+        //     println!("All versions {:?}", self.node.protocol_info.all_versions);
+        //     log::info!("Block #202: {:?}", block);
+        //     checkpoint = 201;
+        // } 
+
         let protocol_version = self
             .node
             .protocol_info
             .all_versions
-            .version_for_epoch(block_beacon.checkpoint);
+            .version_for_epoch(checkpoint);
+
+        println!("-----Protocol version: {:?}", protocol_version);
+        println!("-----Checkpoint beacon: {:?}", block_beacon.checkpoint);
+
+        println!("----1.7 {:?}",block.versioned_hash(ProtocolVersion::V1_7) );
+        println!("----1.8 {:?}",block.versioned_hash(ProtocolVersion::V1_8) );
+        println!("----2.0 {:?}",block.versioned_hash(ProtocolVersion::V2_0) );
+        println!("----protocol versions {:?}",self.node.protocol_info.all_versions);
+
+        println!("last_confirmed.hash_prev_block {:?}", last_confirmed.hash_prev_block);
+
         let (needs_clear_pending, needs_indexing) = if block_beacon.hash_prev_block
             == last_sync.hash_prev_block
             && (block_beacon.checkpoint == 0 || block_beacon.checkpoint > last_sync.checkpoint)
@@ -1083,11 +1135,14 @@ impl Worker {
             return Ok(());
         }
 
+        println!("CONSOLIDATED BLOCK HASHED *------>>>> {:?}", &notification.consolidated_block_hashes);
+
         let consolidated = wallet
             .handle_superblock(&notification.consolidated_block_hashes)
             .map_err(Error::from);
 
         match consolidated {
+            
             Ok(_) => {
                 // Notify consolidation of the persisted blocks
                 self.notify_client(
@@ -1149,7 +1204,19 @@ impl Worker {
         wallet: &types::SessionWallet,
         sink: types::DynamicSink,
     ) -> Result<CheckpointBeacon> {
-        let block_hash = block.hash();
+        let protocol_version = self
+            .node
+            .protocol_info
+            .all_versions
+            .version_for_epoch(block.block_header.beacon.checkpoint);
+        println!("*INDEX_BLOCK*-----Protocol version: {:?}", protocol_version);
+        println!("-----Checkpoint beacon: {:?}", block.block_header.beacon.checkpoint);
+
+        println!("----1.7 {:?}",block.versioned_hash(ProtocolVersion::V1_7) );
+        println!("----1.8 {:?}",block.versioned_hash(ProtocolVersion::V1_8) );
+        println!("----2.0 {:?}",block.versioned_hash(ProtocolVersion::V2_0) );
+        println!("----protocol versions {:?}",self.node.protocol_info.all_versions);
+        let block_hash = block.versioned_hash(protocol_version);
 
         // Immediately update the local reference to the node's last beacon
         let block_own_beacon = CheckpointBeacon {
@@ -1166,6 +1233,13 @@ impl Worker {
             .iter()
             .cloned()
             .map(Transaction::from);
+        let stake_txns = block
+            .txns
+            .stake_txns
+            .iter()
+            .cloned()
+            .map(Transaction::from);
+        //TODO: unstake transactions
         let dr_txns = block
             .txns
             .data_request_txns
@@ -1184,6 +1258,8 @@ impl Worker {
             .chain(dr_txns)
             .chain(commit_txns)
             .chain(tally_txns)
+            //TODO: unstake transactions
+            .chain(stake_txns)
             .chain(std::iter::once(Transaction::Mint(block.txns.mint.clone())));
 
         let block_info = model::Beacon {

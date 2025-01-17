@@ -7,17 +7,15 @@ server_addr = "0.0.0.0:21337"
 # Public address needs to match your *public* IP and port, assuming your router is configured to forward incoming
 # connections to the local IP of the device the node is running. Failure to configure this setting will result in your
 # node not receiving inbound connections (see: https://docs.witnet.io/try/run-a-node/#open-your-ports).
-public_addr = "0.0.0.0:21337"
+public_addr = "88.19.29.178:21337"
 # List of bootstrap peer addresses. The first time that a node runs, it connects to some of these addresses and query
 # them for a list of all the addresses they know. From that moment on, the addresses listed here are not given any
 # preference over addresses that have been discovered in any way.
-known_peers = [
-    "62.146.171.153:31337",
-    "62.146.171.153:32337",
-    "62.146.171.154:31337",
-    "62.146.171.154:32337",
-    "62.146.171.155:31337",
-    "62.146.171.155:32337",
+known_peers =[
+    "62.146.171.154:21337",
+    "62.146.171.154:22337",
+    "62.146.171.155:21337",
+    "62.146.171.155:22337",
 ]
 
 # How many peer connections to stablish before considering that is safe to decide what the best chain tip is, based on
@@ -40,7 +38,7 @@ enabled = true
 # WARNING: these should be kept to a local, private address (e.g. 127.0.0.1) to prevent any device in your local network
 # (and potentially, the internet) from messing with your JSON-RPC server.
 # JSON-RPC over plain TCP (required for CLI usage). Set `enabled` above to `false` to disable.
-tcp_address = "127.0.0.1:21338"
+tcp_address = "0.0.0.0:21338"
 # JSON-RPC over HTTP. Remove the line to disable it.
 http_address = "127.0.0.1:21339"
 # JSON-RPC over WebSockets. Remove the line to disable it.
@@ -65,7 +63,7 @@ data_request_max_retrievals_per_epoch = 30
 data_request_timeout_milliseconds = 2000
 # Path for the `genesis_block.json` file that contains the initial wit allocations that need to be built into the first
 # block in the block chain.
-genesis_path = "./genesis_block.json"
+genesis_path = "/tmp/testnet-1/genesis_block.json"
 # `mint_external_address` and `mint_external_percentage` enable splitting the mint reward between the node's
 # own address and an "external" address, e.g. a the address of a wallet. `mint_external_percentage` indicates
 # the percentage of the block rewards that will be assigned to `mint_external_address` (50% by default)

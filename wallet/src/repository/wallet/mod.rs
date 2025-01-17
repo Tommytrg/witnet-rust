@@ -17,20 +17,13 @@ use witnet_crypto::{
 };
 use witnet_data_structures::{
     chain::{
-        CheckpointBeacon, DataRequestOutput, Environment, Epoch, EpochConstants, Hash, Hashable,
-        Input, KeyedSignature, OutputPointer, PublicKeyHash, ValueTransferOutput,
-    },
-    fee::{AbsoluteFee, Fee},
-    get_environment,
-    radon_error::RadonError,
-    transaction::{
+        CheckpointBeacon, DataRequestOutput, Environment, Epoch, EpochConstants, Hash, Hashable, Input, KeyedSignature, OutputPointer, PublicKeyHash, StakeOutput, ValueTransferOutput
+    }, fee::{AbsoluteFee, Fee}, get_environment, proto::versioning::{ProtocolInfo, VersionedHashable}, radon_error::RadonError, transaction::{
         DRTransaction, DRTransactionBody, TallyTransaction, Transaction, VTTransaction,
         VTTransactionBody,
-    },
-    transaction_factory::{
+    }, transaction_factory::{
         insert_change_output, CollectedOutputs, OutputsCollection, TransactionInfo,
-    },
-    utxo_pool::UtxoSelectionStrategy,
+    }, utxo_pool::UtxoSelectionStrategy
 };
 use witnet_rad::{error::RadError, types::RadonTypes};
 use witnet_util::timestamp::get_timestamp;
@@ -671,7 +664,8 @@ where
                 }
             }
         }
-
+        println!("TOTAL TRANSACTION ...... {:?}", total);
+        println!("TRANSACTIONS ...... {:?}", transactions);
         Ok(model::WalletTransactions {
             transactions,
             total,
@@ -791,6 +785,8 @@ where
                 Transaction::Commit(ref commit) => (&commit.body.collateral, &commit.body.outputs),
                 Transaction::Tally(ref tally) => (&[], &tally.outputs),
                 Transaction::Mint(ref mint) => (&[], &mint.outputs),
+                Transaction::Stake(ref st) => (&st.body.inputs, &st.body.change.clone().into_iter().collect::<Vec<_>>()),
+                Transaction::Unstake(ref unstake) => (&[], &[unstake.body.withdrawal.clone()]),
                 _ => continue,
             };
 
@@ -848,8 +844,11 @@ where
             match self._index_transaction(&mut state, &mut addresses, txn, block_info, confirmed) {
                 Ok(Some(balance_movement)) => {
                     if let Transaction::DataRequest(dr_tx) = &txn.transaction {
+                        let protocol_version = self.params.protocol_info.all_versions.version_for_epoch(block_info.epoch);
+
+
                         dr_balance_movements.insert(
-                            dr_tx.hash().to_string(),
+                            dr_tx.versioned_hash(protocol_version).to_string(),
                             (block_info.block_hash, block_balance_movements.len()),
                         );
                     }
@@ -1394,8 +1393,10 @@ where
                 Some(account_mutation) => account_mutation,
             };
 
+        let protocol_version = self.params.protocol_info.all_versions.version_for_epoch(block_info.epoch);
+
         // If exists, remove transaction from local pending movements
-        let txn_hash = txn.transaction.hash();
+        let txn_hash = txn.transaction.versioned_hash(protocol_version);
         if let Some(local_movement) = state.local_movements.remove(&txn_hash) {
             log::debug!(
                 "Updating local pending movement (txn id: {}) because it has been included in block #{}",
@@ -1430,7 +1431,8 @@ where
         // creators. By protocol the tally output can only be set to the first used input of the DR.
         // - Commit and Reveal transactions are ignored as they only contain miners addresses.
         match txn.transaction {
-            Transaction::ValueTransfer(_) | Transaction::Mint(_) => {
+            // TODO: add stake an unstake txs
+            Transaction::ValueTransfer(_) | Transaction::Mint(_) | Transaction::Stake(_) | Transaction::Unstake(_) => {
                 for (output_pointer, key_balance) in account_mutation.utxo_inserts {
                     // Retrieve previous address information
                     let old_address = match addresses.entry(key_balance.pkh) {
@@ -1540,7 +1542,9 @@ where
             account_mutation.balance_movement.transaction.timestamp =
                 u64::try_from(get_timestamp())
                     .expect("Get timestamp should return a positive value");
-            let txn_hash = txn.transaction.hash();
+            // FIXME
+            let protocol_version = self.params.protocol_info.current_version;
+            let txn_hash = txn.transaction.versioned_hash(protocol_version);
             state
                 .local_movements
                 .insert(txn_hash, account_mutation.balance_movement.clone());
@@ -1579,6 +1583,8 @@ where
                 Transaction::Commit(commit) => commit.body.outputs,
                 Transaction::Tally(tally) => tally.outputs,
                 Transaction::Mint(mint) => mint.outputs,
+                Transaction::Stake(stake) => stake.body.change.into_iter().collect(),
+                Transaction::Unstake(unstake) => Vec::from([unstake.body.withdrawal]),
                 _ => vec![],
             })
             .collect_vec();
@@ -1662,6 +1668,7 @@ where
         let mut utxo_removals: Vec<model::OutPtr> = vec![];
         let mut utxo_inserts: Vec<(model::OutPtr, model::OutputInfo)> = vec![];
         let mut resolved_inputs: Vec<ValueTransferOutput> = vec![];
+        //TODO: get change
 
         let mut input_amount: u64 = 0;
         for input in inputs.iter() {
@@ -1706,8 +1713,9 @@ where
                 }
             }
             if own_outputs.contains_key(&output.pkh) {
+                let protocol_version = self.params.protocol_info.all_versions.version_for_epoch(block_info.epoch);
                 let out_ptr = model::OutPtr {
-                    txn_hash: txn.transaction.hash().as_ref().to_vec(),
+                    txn_hash: txn.transaction.versioned_hash(protocol_version).as_ref().to_vec(),
                     output_index: u32::try_from(index).unwrap(),
                 };
                 let output_info = model::OutputInfo {
@@ -1744,6 +1752,8 @@ where
             (input_amount - output_amount, model::MovementType::Negative)
         };
 
+        let protocol_version = self.params.protocol_info.all_versions.version_for_epoch(block_info.epoch);
+
         // Build the balance movement, first computing the miner fee
         let miner_fee: u64 = match &txn.metadata {
             Some(model::TransactionMetadata::InputValues(input_values)) => {
@@ -1754,11 +1764,12 @@ where
                     0u64
                 } else {
                     let total_output_amount = outputs.iter().fold(0, |acc, x| acc + x.value);
+                    //TODO: in case of stake transaction minus change
 
                     total_input_amount
                         .checked_sub(total_output_amount)
                         .unwrap_or_else(|| {
-                            log::warn!("Miner fee below 0 in a transaction of type value transfer or data request: {}", txn.transaction.hash().to_string());
+                            log::warn!("Miner fee below 0 in a transaction of type value transfer or data request: {}", txn.transaction.versioned_hash(protocol_version).to_string());
 
                             0
                         })
@@ -1790,6 +1801,7 @@ where
             convert_block_epoch_to_timestamp(state.epoch_constants, block_info.epoch),
             confirmed,
             own_outputs,
+            &self.params.protocol_info,
         )?;
 
         Ok(Some(AccountMutation {
@@ -2068,6 +2080,8 @@ fn extract_inputs_and_outputs(
         }
         Transaction::Tally(tally) => (vec![], tally.outputs.clone()),
         Transaction::Mint(mint) => (vec![], mint.outputs.clone()),
+        Transaction::Stake(stake) => (stake.body.inputs.clone(), stake.body.change.clone().into_iter().collect(),),
+        Transaction::Unstake(unstake) => (vec![], vec![unstake.body.withdrawal.clone()]),
         _ => {
             return Err(Error::UnsupportedTransactionType(format!(
                 "{:?}",
@@ -2091,6 +2105,7 @@ fn build_balance_movement(
     timestamp: u64,
     confirmed: bool,
     own_outputs: HashMap<PublicKeyHash, model::OutputType>,
+    protocol_info: &ProtocolInfo,
 ) -> Result<model::BalanceMovement> {
     // Input values with their ValueTransferOutput data
     let transaction_inputs = match &txn.metadata {
@@ -2103,6 +2118,8 @@ fn build_balance_movement(
             .collect::<Vec<model::Input>>(),
         _ => vec![],
     };
+
+    println!("Transaction ->: {:?}", &txn.transaction);
 
     // Transaction Data
     let transaction_data = match &txn.transaction {
@@ -2127,6 +2144,14 @@ fn build_balance_movement(
             outputs: vtt_to_outputs(&tally.outputs, &own_outputs),
             tally: build_tally_report(tally, &txn.metadata)?,
         }),
+        Transaction::Stake(stake) => model::TransactionData::Stake(model::StakeData {
+            inputs: transaction_inputs,
+            // TODO: should the stake output value be in txn.metadata?
+            change: stake.body.change.as_ref().map(|change| vto_to_output(change, &own_outputs)),
+        }),
+        Transaction::Unstake(unstake) => model::TransactionData::Unstake(model::UnstakeData {
+            withdrawal: vto_to_output(&unstake.body.withdrawal, &own_outputs)
+        }),
         _ => {
             return Err(Error::UnsupportedTransactionType(format!(
                 "{:?}",
@@ -2134,6 +2159,7 @@ fn build_balance_movement(
             )));
         }
     };
+    let protocol_version = protocol_info.all_versions.version_for_epoch(block_info.epoch);
 
     Ok(model::BalanceMovement {
         db_key: identifier,
@@ -2143,7 +2169,7 @@ fn build_balance_movement(
             block: Some(block_info.clone()),
             confirmed,
             data: transaction_data,
-            hash: hex::encode(txn.transaction.hash()),
+            hash: hex::encode(txn.transaction.versioned_hash(protocol_version)),
             miner_fee,
             timestamp,
         },
@@ -2300,6 +2326,21 @@ fn vtt_to_outputs(
                 .unwrap_or(&model::OutputType::Other),
         })
         .collect::<Vec<model::Output>>()
+}
+
+// Map vto to output 
+fn vto_to_output(
+    vto: &ValueTransferOutput,
+    own_outputs: &HashMap<PublicKeyHash, model::OutputType>,
+) -> model::Output {
+         model::Output {
+            address: vto.pkh.to_string(),
+            time_lock: vto.time_lock,
+            value: vto.value,
+            output_type: *own_outputs
+                .get(&vto.pkh)
+                .unwrap_or(&model::OutputType::Other),
+        }
 }
 
 #[inline]

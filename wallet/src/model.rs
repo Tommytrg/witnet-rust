@@ -187,8 +187,10 @@ pub enum TransactionData {
     Mint(MintData),
     #[serde(rename = "commit")]
     Commit(VtData),
-    // #[serde(rename = "stake")]
-    // Stake(StakeData),
+    #[serde(rename = "stake")]
+    Stake(StakeData),
+    #[serde(rename = "unstake")]
+    Unstake(UnstakeData),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -214,6 +216,17 @@ pub struct TallyData {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MintData {
     pub outputs: Vec<Output>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StakeData {
+    pub inputs: Vec<Input>,
+    pub change: Option<Output>,
+}
+    
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UnstakeData {
+    pub withdrawal: Output
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
