@@ -9,8 +9,8 @@ use crate::{
     types::{number_from_string, u32_to_string, u64_to_string},
 };
 use witnet_data_structures::{
-    chain::{DataRequestInfo, Hash, OutputPointer, PublicKeyHash, ValueTransferOutput},
-    transaction::Transaction,
+    chain::{DataRequestInfo, Hash, OutputPointer, PublicKeyHash, ValueTransferOutput, StakeOutput},
+    transaction::Transaction, 
 };
 use witnet_util::timestamp::get_timestamp;
 
@@ -92,7 +92,7 @@ pub struct WalletBalance {
     pub unconfirmed: BalanceInfo,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExtendedKeyedSignature {
     pub signature: String,
     pub public_key: String,
@@ -218,15 +218,42 @@ pub struct MintData {
     pub outputs: Vec<Output>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct StakeKey<Address> {
+    /// A validator address.
+    pub validator: Address,
+    /// A withdrawer address.
+    pub withdrawer: Address,
+}
+
+// #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+// pub struct StakeOutput {
+//     // TODO: add when necessary
+//     pub authorization: ExtendedKeyedSignature,
+//     pub key: StakeKey<PublicKeyHash>,
+//     pub value: u64,
+// }
+
+// impl From<StakeOutput> for StakeOutput{
+//     fn from(out_ptr: &OutPtr) -> OutputPointer {
+//         OutputPointer {
+//             transaction_id: out_ptr.transaction_id(),
+//             output_index: out_ptr.output_index,
+//         }
+//     }
+// }
+
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StakeData {
     pub inputs: Vec<Input>,
+    pub output: StakeOutput,
     pub change: Option<Output>,
 }
-    
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UnstakeData {
-    pub withdrawal: Output
+    pub withdrawal: Output,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -384,6 +411,9 @@ impl fmt::Display for Beacon {
 }
 
 pub type UtxoSet = HashMap<OutPtr, OutputInfo>;
+
+// TODO: check where keychain is initialized and initialized / 2
+pub type StakeOutputSet = HashMap<OutPtr, StakeOutput>;
 
 /// Map of output pointer to timestamp.
 /// Used to mark outputs that have been recently used in a transaction.

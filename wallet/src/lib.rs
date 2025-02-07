@@ -205,23 +205,23 @@ pub fn run(conf: Config) -> Result<(), Error> {
     Ok(())
 }
 
-async fn get_protocol_info (node_client: Arc<app::NodeClient>) -> Result<ProtocolInfo, app::Error> {
-     let method = String::from("protocol");
-        let params1 = json!(null);
-        let req = jsonrpc::Request::method(method)
-            .timeout(Duration::from_secs(5))
-            .params(params1)
-            .expect("params failed serialization");
+async fn get_protocol_info(node_client: Arc<app::NodeClient>) -> Result<ProtocolInfo, app::Error> {
+    let method = String::from("protocol");
+    let params1 = json!(null);
+    let req = jsonrpc::Request::method(method)
+        .timeout(Duration::from_secs(5))
+        .params(params1)
+        .expect("params failed serialization");
 
-        let report: Result<_, Error> = node_client.actor.send(req).flatten_err().await;
+    let report: Result<_, Error> = node_client.actor.send(req).flatten_err().await;
 
-        match report {
-            Ok(report) => Ok(serde_json::from_value::<ProtocolInfo>(report)
-                .expect("Failed to deserialize protocol info")),
-            Err(err) => {
-                log::error!("getProtocolInfo failed: {}", &err);
+    match report {
+        Ok(report) => Ok(serde_json::from_value::<ProtocolInfo>(report)
+            .expect("Failed to deserialize protocol info")),
+        Err(err) => {
+            log::error!("getProtocolInfo failed: {}", &err);
 
-                Err(app::Error::Node(err))
-            }
+            Err(app::Error::Node(err))
         }
+    }
 }

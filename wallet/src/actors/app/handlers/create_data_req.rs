@@ -4,7 +4,10 @@ use witnet_config::defaults::PSEUDO_CONSENSUS_CONSTANTS_WIP0022_REWARD_COLLATERA
 use witnet_data_structures::{
     chain::{tapi::current_active_wips, DataRequestOutput},
     fee::{deserialize_fee_backwards_compatible, AbsoluteFee, Fee},
-    proto::{versioning::{ProtocolVersion, VersionedHashable}, ProtobufConvert},
+    proto::{
+        versioning::{ProtocolVersion, VersionedHashable},
+        ProtobufConvert,
+    },
     transaction::Transaction,
 };
 
@@ -99,11 +102,12 @@ impl Handler<CreateDataReqRequest> for app::App {
                             _ => vec![],
                         };
                         let transaction = transaction.transaction;
-                        
+
                         // FIXME protocol info is fetched when wallet starts. The protocol version could have been updated
-                        // since the start of the wallet 
+                        // since the start of the wallet
                         // let protocol_version = self.params.protocol_info .current_version;
-                        let transaction_id = hex::encode(transaction.versioned_hash(ProtocolVersion::V2_0).as_ref());
+                        let transaction_id =
+                            hex::encode(transaction.versioned_hash(ProtocolVersion::V2_0).as_ref());
                         let bytes = hex::encode(transaction.to_pb_bytes().unwrap());
                         let weight = transaction.weight();
 
