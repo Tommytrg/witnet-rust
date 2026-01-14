@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 # Install basic environment dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
